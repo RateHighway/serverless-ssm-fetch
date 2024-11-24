@@ -1,7 +1,7 @@
 'use strict';
 
 import * as BbPromise from 'bluebird';
-import AWS from 'aws-sdk';
+import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm'
 
 class SsmFetch {
 
@@ -49,14 +49,14 @@ class SsmFetch {
 
       log.info('> serverless-ssm-fetch: Get parameters...');
 
-      // Instantiate an AWS.SSM client()
-      let ssmClient = new AWS.SSM({region: this.serverless.service.provider.region});
+      // Instantiate an SSM client
+      let ssmClient = new SSMClient({region: this.serverless.service.provider.region});
 
       // Get the SSM Parameters set in serverless.yml
       let ssmParameters = this.serverless.service.custom['serverlessSsmFetch'];
 
       // Init an empty collection of Promises that will be populated by
-      // the needed calls to AWS.SSM to get all parameters
+      // the needed calls to SSM to get all parameters
       let promiseCollection = [];
 
       // Make this as self to access it from the following promise
@@ -68,20 +68,20 @@ class SsmFetch {
       // For each SSM parameters to retrieve
       Object.keys(ssmParameters).forEach((parameter) => {
 
-        // Populate promiseCollection with the request to do to AWS.SSM
+        // Populate promiseCollection with the request to do to SSM
         promiseCollection.push(new Promise((resolve, reject) => {
 
           // Splits the parameter string to check if encryption is needed or not
           let splitParameterEncryptionOption = ssmParameters[parameter].split('~');
 
-          // Builds AWS.SSM request payload
+          // Builds SSM request payload
           let params = {
             Name: splitParameterEncryptionOption[0],
             WithDecryption: (splitParameterEncryptionOption[1] == 'true')
           };
 
-          // Triggers the `getParameter`request to AWS.SSM
-          ssmClient.getParameter(params, function (err, data) {
+          // Triggers the `getParameter`request to SSM
+          ssmClient.send(new GetParameterCommand(params), function (err, data) {
             log.info(`> serverless-ssm-fetch: Fetching "${parameter}: ${ssmParameters[parameter]}"...`);
             if (err) {
               log.error(`> serverless-ssm-fetch: ${err}`);
