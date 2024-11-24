@@ -6,11 +6,7 @@ var _bluebird = require('bluebird');
 
 var BbPromise = _interopRequireWildcard(_bluebird);
 
-var _awsSdk = require('aws-sdk');
-
-var _awsSdk2 = _interopRequireDefault(_awsSdk);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+var _clientSsm = require('@aws-sdk/client-ssm');
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
@@ -73,14 +69,14 @@ var SsmFetch = function () {
 
         log.info('> serverless-ssm-fetch: Get parameters...');
 
-        // Instantiate an AWS.SSM client()
-        var ssmClient = new _awsSdk2.default.SSM({ region: _this2.serverless.service.provider.region });
+        // Instantiate an SSM client
+        var ssmClient = new _clientSsm.SSMClient({ region: _this2.serverless.service.provider.region });
 
         // Get the SSM Parameters set in serverless.yml
         var ssmParameters = _this2.serverless.service.custom['serverlessSsmFetch'];
 
         // Init an empty collection of Promises that will be populated by
-        // the needed calls to AWS.SSM to get all parameters
+        // the needed calls to SSM to get all parameters
         var promiseCollection = [];
 
         // Make this as self to access it from the following promise
@@ -92,20 +88,20 @@ var SsmFetch = function () {
         // For each SSM parameters to retrieve
         Object.keys(ssmParameters).forEach(function (parameter) {
 
-          // Populate promiseCollection with the request to do to AWS.SSM
+          // Populate promiseCollection with the request to do to SSM
           promiseCollection.push(new Promise(function (resolve, reject) {
 
             // Splits the parameter string to check if encryption is needed or not
             var splitParameterEncryptionOption = ssmParameters[parameter].split('~');
 
-            // Builds AWS.SSM request payload
+            // Builds SSM request payload
             var params = {
               Name: splitParameterEncryptionOption[0],
               WithDecryption: splitParameterEncryptionOption[1] == 'true'
             };
 
-            // Triggers the `getParameter`request to AWS.SSM
-            ssmClient.getParameter(params, function (err, data) {
+            // Triggers the `getParameter`request to SSM
+            ssmClient.send(new _clientSsm.GetParameterCommand(params), function (err, data) {
               log.info('> serverless-ssm-fetch: Fetching "' + parameter + ': ' + ssmParameters[parameter] + '"...');
               if (err) {
                 log.error('> serverless-ssm-fetch: ' + err);
